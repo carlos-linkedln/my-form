@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Supabase Form</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: system-ui, sans-serif; }
   </style>
@@ -18,81 +17,95 @@
     <form id="form" class="space-y-6">
       <div>
         <label class="block text-sm font-medium mb-1">Your name</label>
-        <input type="text" id="name" required
-               class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500">
+        <input type="text" id="name" required class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500">
       </div>
 
       <div>
         <label class="block text-sm font-medium mb-1">Email address</label>
-        <input type="email" id="email" required
-               class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500">
+        <input type="email" id="email" required class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500">
       </div>
 
       <div>
         <label class="block text-sm font-medium mb-1">Your message</label>
-        <textarea id="message" rows="5" required
-                  class="w-full bg-zinc-800 border border-zinc-700 rounded-3xl px-4 py-3 focus:outline-none focus:border-blue-500"></textarea>
+        <textarea id="message" rows="5" required class="w-full bg-zinc-800 border border-zinc-700 rounded-3xl px-4 py-3 focus:outline-none focus:border-blue-500"></textarea>
       </div>
 
-      <button type="submit"
-              id="submitBtn"
-              class="w-full bg-blue-600 hover:bg-blue-500 transition-colors text-white font-semibold py-4 rounded-3xl text-lg flex items-center justify-center">
+      <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 transition-colors text-white font-semibold py-4 rounded-3xl text-lg flex items-center justify-center">
         Send to Supabase
       </button>
     </form>
 
-    <div id="status" class="mt-6 text-center text-sm hidden"></div>
+    <div id="status" class="mt-6 text-center text-sm"></div>
+
+    <!-- Debug button -->
+    <button onclick="testConnection()" class="mt-6 w-full text-xs text-zinc-500 hover:text-white underline">
+      🔧 Test Supabase connection (click if nothing happens)
+    </button>
   </div>
 
-  <script>
+  <script type="module">
     // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-    // REPLACE THESE TWO LINES WITH YOUR OWN VALUES FROM STEP 1
-    const supabaseUrl = 'https://dylaymhkwsmbjscbppmc.supabase.co'
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5bGF5bWhrd3NtYmpzY2JwcG1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzOTcwODEsImV4cCI6MjA5MDk3MzA4MX0.fx9z0pvfm96PlxXkKNv7yfs6CIZYeDyZUrOpx_u4Z2A'
+    // REPLACE THESE TWO LINES WITH YOUR REAL VALUES
+    const supabaseUrl = 'https://YOUR-PROJECT.supabase.co'
+    const supabaseAnonKey = 'eyJhbGciOi...your-anon-key-here...'
     // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
 
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
     const form = document.getElementById('form')
     const status = document.getElementById('status')
     const submitBtn = document.getElementById('submitBtn')
 
+    // Show message in UI + console
+    function showStatus(message, color = 'blue') {
+      status.innerHTML = `<span class="text-${color}-400">${message}</span>`
+      status.classList.remove('hidden')
+      console.log('%c' + message, `color: ${color === 'green' ? '#22c55e' : color === 'red' ? '#ef4444' : '#3b82f6'}`)
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault()
       
-      // Disable button while sending
       submitBtn.disabled = true
-      submitBtn.innerHTML = `
-        <svg class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-        </svg>
-        Sending...
-      `
+      submitBtn.innerHTML = `Sending...`
 
       const data = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        message: document.getElementById('message').value
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        message: document.getElementById('message').value.trim()
       }
 
-      const { error } = await supabase
+      console.log('Attempting to insert:', data)
+
+      const { data: result, error } = await supabase
         .from('submissions')
         .insert([data])
+        .select()
 
       if (error) {
-        status.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`
-        status.classList.remove('hidden')
+        console.error('Supabase error:', error)
+        showStatus(`❌ ${error.message}<br><small class="text-zinc-500">${error.code || ''}</small>`, 'red')
       } else {
-        status.innerHTML = `<span class="text-green-400">✅ Thank you! Your message is now in Supabase.</span>`
-        status.classList.remove('hidden')
+        showStatus('✅ Success! Row inserted. Check your Supabase table.', 'green')
         form.reset()
+        console.log('Inserted row:', result)
       }
 
-      // Reset button
       submitBtn.disabled = false
       submitBtn.innerHTML = 'Send to Supabase'
     })
+
+    // Quick connection test
+    window.testConnection = async () => {
+      showStatus('Testing connection...', 'blue')
+      const { error } = await supabase.from('submissions').select('count').limit(1)
+      if (error) {
+        showStatus(`Connection test failed: ${error.message}`, 'red')
+      } else {
+        showStatus('✅ Supabase is reachable! Now try submitting the form.', 'green')
+      }
+    }
   </script>
 </body>
 </html>
